@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Araç Fiyat &amp; ÖTV Hesaplama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --forest-950:#0b241c;
+    --forest-900:#0f3427;
+    --forest-800:#154a37;
+    --forest-700:#1c6047;
+    --lime-500:#8fce3a;
+    --lime-600:#78b52c;
+    --paper:#f2f4ef;
+    --paper-2:#e9ece4;
+    --ink:#12201a;
+    --ink-soft:#4c5a52;
+    --line:#d7dcd2;
+    --white:#ffffff;
+    --amber:#c8862a;
+    --radius:2px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Archivo', system-ui, -apple-system, sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    min-height:100vh;
+  }
+  .display{font-family:'Fraunces', Georgia, serif;}
+
+  /* ---------- Header ---------- */
+  header.topbar{
+    background:var(--forest-950);
+    color:var(--paper);
+    padding:22px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:3px solid var(--lime-500);
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+  }
+  .brand .mark{
+    width:34px;height:34px;
+    border-radius:50%;
+    background:var(--lime-500);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--forest-950);
+    font-weight:800;
+    font-size:16px;
+    flex:none;
+  }
+  .brand h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:20px;
+    margin:0;
+    letter-spacing:0.2px;
+  }
+  .brand span.tagline{
+    color:#a9c2b3;
+    font-size:12.5px;
+  }
+  .topbar .meta{
+    font-size:12.5px;
+    color:#9db7a7;
+    text-align:right;
+  }
+
+  main{
+    max-width:1040px;
+    margin:0 auto;
+    padding:40px 24px 90px;
+  }
+
+  /* ---------- Empty state ---------- */
+  .empty-hero{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:22px;
+    padding:64px 8px 40px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:36px;
+  }
+  .empty-hero h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:38px;
+    line-height:1.15;
+    margin:0;
+    max-width:640px;
+  }
+  .empty-hero p{
+    color:var(--ink-soft);
+    max-width:520px;
+    font-size:15.5px;
+    margin:0;
+  }
+
+  button{
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .btn{
+    border:none;
+    padding:14px 26px;
+    font-size:15px;
+    font-weight:600;
+    border-radius:var(--radius);
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    transition:transform .12s ease, background .15s ease;
+  }
+  .btn:active{ transform:scale(0.98); }
+  .btn-primary{
+    background:var(--forest-900);
+    color:var(--paper);
+  }
+  .btn-primary:hover{ background:var(--forest-800); }
+  .btn-accent{
+    background:var(--lime-500);
+    color:var(--forest-950);
+  }
+  .btn-accent:hover{ background:var(--lime-600); }
+  .btn-ghost{
+    background:transparent;
+    color:var(--forest-900);
+    border:1.5px solid var(--forest-900);
+    padding:12.5px 24px;
+  }
+  .btn-ghost:hover{ background:var(--forest-900); color:var(--paper); }
+  .btn-sm{ padding:9px 16px; font-size:13.5px; }
+
+  /* ---------- Selected vehicle summary bar ---------- */
+  .vehicle-bar{
+    display:none;
+    background:var(--white);
+    border:1px solid var(--line);
+    padding:22px 26px;
+    margin-bottom:28px;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    flex-wrap:wrap;
+  }
+  .vehicle-bar.show{ display:flex; }
+  .vehicle-bar .vname{
+    font-family:'Fraunces', serif;
+    font-size:22px;
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  .vehicle-bar .vsub{
+    font-size:13px;
+    color:var(--ink-soft);
+    display:flex;
+    gap:16px;
+  }
+  .vehicle-bar .actions{
+    display:flex;
+    gap:10px;
+  }
+
+  /* ---------- Results ---------- */
+  .results{ display:none; }
+  .results.show{ display:block; }
+
+  .hero-price{
+    background:var(--forest-950);
+    color:var(--paper);
+    padding:38px 32px;
+    margin-bottom:4px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero-price::after{
+    content:"";
+    position:absolute;
+    right:-40px; top:-40px;
+    width:180px;height:180px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(143,206,58,0.18), transparent 70%);
+  }
+  .hero-price .label{
+    font-size:12.5px;
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+    color:#9fd66a;
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  .hero-price .amount{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:46px;
+    letter-spacing:-0.5px;
+  }
+  .hero-price .amount small{
+    font-size:20px;
+    font-weight:500;
+    color:#a9c2b3;
+    margin-left:6px;
+  }
+  .hero-price .breakdown-link{
+    margin-top:16px;
+  }
+
+  .grid-cards{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:1px;
+    background:var(--line);
+    margin-bottom:28px;
+  }
+  .mini-card{
+    background:var(--white);
+    padding:20px 22px;
+  }
+  .mini-card .k{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.6px;
+    color:var(--ink-soft);
+    font-weight:600;
+    margin-bottom:8px;
+  }
+  .mini-card .v{
+    font-family:'Fraunces', serif;
+    font-size:22px;
+    font-weight:600;
+  }
+  .mini-card .v.sub{ font-size:13px; color:var(--ink-soft); font-weight:500; font-family:'Archivo';}
+
+  .section-title{
+    font-family:'Fraunces', serif;
+    font-size:15px;
+    font-weight:600;
+    color:var(--forest-900);
+    margin:34px 0 12px;
+    padding-bottom:8px;
+    border-bottom:1.5px solid var(--forest-900);
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+
+  table.breakdown{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--white);
+  }
+  table.breakdown tr{ border-bottom:1px solid var(--line); }
+  table.breakdown tr:last-child{ border-bottom:none; }
+  table.breakdown td{ padding:11px 16px; font-size:14px; }
+  table.breakdown td.label{ color:var(--ink-soft); width:60%; }
+  table.breakdown td.val{ text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+  table.breakdown tr.total td{ background:var(--paper-2); font-weight:700; }
+  table.breakdown tr.total td.val{ color:var(--forest-800); }
+  table.breakdown td.sub{ color:var(--ink-soft); font-weight:400; font-size:12.5px; padding-left:28px;}
+
+  .footnote{
+    margin-top:26px;
+    font-size:12px;
+    color:var(--ink-soft);
+    line-height:1.6;
+  }
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(11,36,28,0.55);
+    backdrop-filter:blur(2px);
+    z-index:100;
+    align-items:flex-start;
+    justify-content:center;
+    padding:5vh 16px;
+    overflow-y:auto;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:var(--paper);
+    width:100%;
+    max-width:560px;
+    border-top:4px solid var(--lime-500);
+    box-shadow:0 20px 60px rgba(0,0,0,0.35);
+    animation:pop .18s ease;
+  }
+  @keyframes pop{
+    from{ opacity:0; transform:translateY(8px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .modal-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:22px 26px 16px;
+  }
+  .modal-head h3{
+    font-family:'Fraunces', serif;
+    font-size:20px;
+    margin:0;
+  }
+  .modal-head .close{
+    background:none; border:none;
+    font-size:22px;
+    line-height:1;
+    color:var(--ink-soft);
+    padding:4px 8px;
+  }
+  .modal-head .close:hover{ color:var(--ink); }
+  .modal-body{ padding:0 26px 26px; }
+
+  .search-box{
+    width:100%;
+    padding:13px 16px;
+    border:1.5px solid var(--line);
+    background:var(--white);
+    font-size:15px;
+    margin-bottom:14px;
+    font-family:inherit;
+  }
+  .search-box:focus{ outline:none; border-color:var(--forest-700); }
+
+  .series-group{ margin-bottom:6px; }
+  .series-group .series-name{
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--forest-700);
+    font-weight:700;
+    margin:16px 0 6px;
+  }
+  .model-list{
+    max-height:52vh;
+    overflow-y:auto;
+    border:1px solid var(--line);
+    background:var(--white);
+  }
+  .model-row{
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    border-bottom:1px solid var(--line);
+    padding:13px 16px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    font-size:14px;
+  }
+  .model-row:last-child{ border-bottom:none; }
+  .model-row:hover{ background:var(--paper-2); }
+  .model-row .mname{ font-weight:600; }
+  .model-row .mtag{
+    font-size:11.5px;
+    color:var(--ink-soft);
+    white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+  .no-results{ padding:24px 16px; color:var(--ink-soft); text-align:center; font-size:14px; }
+
+  .field{ margin-bottom:20px; }
+  .field label{
+    display:flex;
+    justify-content:space-between;
+    font-size:13.5px;
+    font-weight:600;
+    margin-bottom:8px;
+    color:var(--forest-900);
+  }
+  .field label .val-chip{
+    background:var(--forest-950);
+    color:var(--lime-500);
+    padding:2px 10px;
+    font-size:13px;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+  }
+  .field input[type=range]{
+    width:100%;
+    accent-color:var(--forest-800);
+  }
+  .stepper{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:10px;
+  }
+  .step-btn{
+    width:40px; height:40px;
+    flex:none;
+    border:1.5px solid var(--forest-800);
+    background:var(--white);
+    color:var(--forest-900);
+    font-size:20px;
+    font-weight:700;
+    line-height:1;
+    border-radius:var(--radius);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .step-btn:active{ background:var(--forest-900); color:var(--paper); }
+  .step-input{
+    flex:1;
+    text-align:center;
+    font-family:'Fraunces', serif;
+    font-size:19px;
+    font-weight:600;
+    border:1.5px solid var(--line);
+    background:var(--white);
+    padding:9px 6px;
+    color:var(--forest-950);
+  }
+  .step-input:focus{ outline:none; border-color:var(--forest-700); }
+  .step-pct{ font-size:15px; color:var(--ink-soft); flex:none; }
+  .field .hint{ font-size:12px; color:var(--ink-soft); margin-top:6px; }
+  .field .num-input{
+    width:100%;
+    padding:11px 14px;
+    border:1.5px solid var(--line);
+    font-size:15px;
+    font-family:inherit;
+    margin-top:6px;
+  }
+  .field .num-input:focus{ outline:none; border-color:var(--forest-700); }
+
+  .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:8px;
+  }
+
+  @media (max-width:640px){
+    .grid-cards{ grid-template-columns:1fr 1fr; }
+    .empty-hero h2{ font-size:29px; }
+    header.topbar{ padding:18px; }
+    main{ padding:26px 16px 70px; }
+    .hero-price .amount{ font-size:34px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark">Š</div>
+    <div>
+      <h1>Fiyat &amp; ÖTV Hesaplama</h1>
+      <div class="tagline">Škoda bayi satış aracı</div>
+    </div>
+  </div>
+  <div class="meta">23/07/2025 tarihli ÖTV kararına göre<br>güncellenmiştir</div>
+</header>
+
+<main>
+
+  <div class="empty-hero" id="emptyHero">
+    <h2>Hangi araç için anahtar teslim fiyat çıkaralım?</h2>
+    <p>Model seçin, kamu/daimi ve bayi özel indirim oranlarını ayarlayın; ÖTV oranı, harçlar ve KDV dahil anahtar teslim fiyatı anında hesaplansın.</p>
+    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="openModelModal()">Araç Seç →</button>
+      <button class="btn btn-ghost" onclick="openCustomModal()">Özel Fiyat Ekle</button>
+    </div>
+  </div>
+
+  <div class="vehicle-bar" id="vehicleBar">
+    <div>
+      <p class="vname" id="vbName">—</p>
+      <div class="vsub">
+        <span id="vbCC">—</span>
+        <span id="vbFatura">—</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" onclick="openModelModal()">Aracı Değiştir</button>
+      <button class="btn btn-ghost btn-sm" onclick="openCustomModal()">Özel Fiyat Ekle</button>
+      <button class="btn btn-ghost btn-sm" onclick="openCompareModal()">Eski Fiyatla Karşılaştır</button>
+      <button class="btn btn-accent btn-sm" onclick="openParamModal()">Oranları Düzenle</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+
+    <div class="hero-price">
+      <div class="label">Anahtar Teslim Fiyat · Harç Dahil</div>
+      <div class="amount" id="heroTotal">—</div>
+    </div>
+
+    <div class="grid-cards">
+      <div class="mini-card">
+        <div class="k">ÖTV Oranı</div>
+        <div class="v" id="cardOtvRate">—</div>
+      </div>
+      <div class="mini-card">
+        <div class="k">Beyan ÖTV Tutarı</div>
+        <div class="v" id="cardOtvAmount">—</div>
+      </div>
+      <div class="mini-card">
+        <div class="k">Araç + ÖTV + KDV</div>
+        <div class="v" id="cardWithVat">—</div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>Fiyat Yapısı</span>
+      <button class="btn btn-ghost btn-sm" onclick="openParamModal()">Oranları Düzenle</button>
+    </div>
+    <table class="breakdown" id="tablePricing"></table>
+
+    <div class="section-title"><span>Vergi Hesabı</span></div>
+    <table class="breakdown" id="tableTax"></table>
+
+    <div class="section-title"><span>Harçlar ve Toplam</span></div>
+    <table class="breakdown" id="tableFinal"></table>
+
+    <div class="section-title"><span>Bayiye Özel Referans</span></div>
+    <table class="breakdown" id="tableDealer"></table>
+
+    <div id="compareSection" style="display:none;">
+      <div class="section-title">
+        <span>Fiyat Karşılaştırması — Eski vs Güncel</span>
+        <button class="btn btn-ghost btn-sm" onclick="openCompareModal()">Değeri Güncelle</button>
+      </div>
+      <table class="breakdown" id="tableCompare" style="margin-bottom:8px;"></table>
+    </div>
+
+    <p class="footnote">
+      Hesaplama, güncel bayi fatura bedeli, ÖTV matrahı (fatura bedelinin %90'ı) ve 23/07/2025 tarihli ÖTV oranları tablosu esas alınarak yapılmıştır. KDV oranı %20 olarak uygulanmıştır. Gerçek satış öncesi kesin fiyat için bayi teyidi alınmalıdır.
+    </p>
+  </div>
+
+</main>
+
+<!-- Model Selection Modal -->
+<div class="overlay" id="modelOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Araç Seç</h3>
+      <button class="close" onclick="closeModal('modelOverlay')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="text" class="search-box" id="searchInput" placeholder="Model ara… örn. Kodiaq, Superb, Elroq" oninput="renderModelList()">
+      <div class="model-list" id="modelList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Compare Old vs New Modal -->
+<div class="overlay" id="compareOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Eski Fiyatla Karşılaştır</h3>
+      <button class="close" onclick="closeModal('compareOverlay')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Güncel Fatura Bedeli</label>
+        <input class="num-input" id="compareCurrentLabel" disabled style="margin-top:6px;background:var(--paper-2);color:var(--ink-soft);">
+      </div>
+      <div class="field">
+        <label>Eski Fatura Bedeli (TL)</label>
+        <input type="number" class="num-input" id="compareOld" placeholder="örn. 1350000" min="0" step="0.01">
+        <div class="hint">Aynı araç, aynı silindir hacmi bandı ve aynı oranlarla — sadece fatura bedeli üzerinden karşılaştırılır. Farklı oranlarla karşılaştırmak isterseniz önce "Oranları Düzenle"den güncelleyip tekrar deneyin.</div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('compareOverlay')">Vazgeç</button>
+        <button class="btn btn-primary" onclick="submitCompare()">Karşılaştır</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Price Entry Modal -->
+<div class="overlay" id="customOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Özel Fiyat Ekle</h3>
+      <button class="close" onclick="closeModal('customOverlay')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Araç / Etiket Adı</label>
+        <input type="text" class="num-input" id="customName" placeholder="örn. Müşteriye Özel Araç" style="margin-top:0;">
+      </div>
+
+      <div class="field">
+        <label>Silindir Hacmi / Özellik</label>
+        <select class="num-input" id="customCC" style="margin-top:0;">
+          <option value="1000">≤1400 cc (1000 cc bandı)</option>
+          <option value="1500" selected>1401–1600 cc (1500 cc bandı)</option>
+          <option value="1999">1601–2000 cc / &gt;2000 cc (1999 cc bandı)</option>
+          <option value="ELEKTRLİKLİ">Elektrikli</option>
+        </select>
+        <div class="hint">ÖTV oranı ve plaka masrafı bu banda göre belirlenir.</div>
+      </div>
+
+      <div class="field">
+        <label>Bayiye Fatura Edilen Fiyat (TL)</label>
+        <input type="number" class="num-input" id="customFatura" placeholder="örn. 1500000" min="0" step="0.01">
+        <div class="hint">DS fatura bedeli — ÖTV matrahı bunun %90'ı olarak hesaplanır.</div>
+      </div>
+
+      <div class="field">
+        <label>Noter Harcı (TL) <span style="font-weight:400;color:var(--ink-soft);">— opsiyonel</span></label>
+        <input type="number" class="num-input" id="customNoter" placeholder="0" min="0" step="0.01">
+        <div class="hint">Bilinmiyorsa boş bırakılabilir; harç dahil toplamdan hariç tutulur (0 kabul edilir).</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('customOverlay')">Vazgeç</button>
+        <button class="btn btn-primary" onclick="submitCustomPrice()">Devam Et — Oranları Seç</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Parameters Modal -->
+<div class="overlay" id="paramOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Hesaplama Oranları</h3>
+      <button class="close" onclick="closeModal('paramOverlay')">&times;</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="field" id="tarihField">
+        <label>DS Fatura Dönemi</label>
+        <select class="num-input" id="faturaDonem" style="margin-top:0;" onchange="onFaturaDonemChange()">
+          <option value="2026-07-02">2 Temmuz – 2 Ağustos Arası Faturalanan Araçlar</option>
+          <option value="2026-08-03">3 Ağustos – 17 Ağustos Arası Faturalanan Araçlar</option>
+          <option value="2026-08-18">18 Ağustos – 31 Ağustos Arası Faturalanan Araçlar</option>
+          <option value="2026-09-01" selected>1 Eylül ve Sonrası Faturalanan Araçlar (Güncel)</option>
+        </select>
+        <div class="hint">Seçilen döneme göre hem DS Fatura Bedeli hem Otomatik Kampanya oranı ilgili sirküler/fiyat listesinden otomatik dolduruluyor.</div>
+      </div>
+
+      <div class="field">
+        <label>Kamu / Daimi İndirimi <span class="val-chip" id="kamuChip">%1.0</span></label>
+        <div class="stepper">
+          <button type="button" class="step-btn" onclick="stepParam('kamu',-0.1)">−</button>
+          <input type="text" inputmode="decimal" class="step-input" id="kamuInput" value="1.0" onchange="manualParam('kamu')">
+          <span class="step-pct">%</span>
+          <button type="button" class="step-btn" onclick="stepParam('kamu',0.1)">+</button>
+        </div>
+        <input type="range" id="kamuRange" min="0" max="10" step="0.1" value="1" oninput="syncParamInputs('kamu')" style="margin-top:10px;">
+        <div class="hint">Fatura bedeli üzerinden uygulanan kamu/daimi müşteri indirimi.</div>
+      </div>
+
+      <div class="field">
+        <label>Bayi Özel İndirimi <span class="val-chip" id="bayiChip">%1.5</span></label>
+        <div class="stepper">
+          <button type="button" class="step-btn" onclick="stepParam('bayi',-0.1)">−</button>
+          <input type="text" inputmode="decimal" class="step-input" id="bayiInput" value="1.5" onchange="manualParam('bayi')">
+          <span class="step-pct">%</span>
+          <button type="button" class="step-btn" onclick="stepParam('bayi',0.1)">+</button>
+        </div>
+        <input type="range" id="bayiRange" min="0" max="10" step="0.1" value="1.5" oninput="syncParamInputs('bayi')" style="margin-top:10px;">
+        <div class="hint">ÖTV matrahı (fatura bedelinin %90'ı) üzerinden bayi tarafından sağlanan ek indirim.</div>
+      </div>
+
+      <div class="field">
+        <label>Otomatik Kampanya + YS Bonus <span class="val-chip" id="kampChip">%0.0</span></label>
+        <div class="stepper">
+          <button type="button" class="step-btn" onclick="stepParam('kamp',-0.1)">−</button>
+          <input type="text" inputmode="decimal" class="step-input" id="kampInput" value="0.0" onchange="manualParam('kamp')">
+          <span class="step-pct">%</span>
+          <button type="button" class="step-btn" onclick="stepParam('kamp',0.1)">+</button>
+        </div>
+        <input type="range" id="kampRange" min="0" max="20" step="0.1" value="0" oninput="syncParamInputs('kamp')" style="margin-top:10px;">
+        <div class="hint">DS Fatura Tarihi'ne göre otomatik dolduruldu — gerekirse elle güncelleyin.</div>
+      </div>
+
+      <div id="tabanWarning" style="display:none; background:#fdf0e0; border-left:3px solid var(--amber); padding:10px 14px; font-size:12.5px; color:#7a4a12; margin-bottom:12px;">
+        ⚠ Kampanya + Kamu/Daimi toplamı %10'u geçti. ÖTV, gerçek indirimli tutar yerine fatura bedelinin %90'lık taban matrahından hesaplanacak.
+        <label style="display:flex; align-items:flex-start; gap:8px; margin-top:10px; font-weight:600; cursor:pointer;">
+          <input type="checkbox" id="matrahDestegi" onchange="syncParamInputs('kamp')" style="margin-top:2px;">
+          <span>Matrah Desteği geçerli (Yüce Auto onaylı — Otomatik Kampanya / Nefaset / Mikro Filo indirimi nedeniyle oluşan matrah farkını Yüce Auto karşılıyor). İşaretlerseniz ÖTV, %90 taban yerine gerçek indirimli tutardan hesaplanır.</span>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('paramOverlay')">Vazgeç</button>
+        <button class="btn btn-primary" onclick="applyParams()">Hesapla</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MODELS = [{"name": "Fabia Premium 1.0 TSI 115 PS DSG", "cc": 1000, "fatura": 929528.06, "noter": 4019.8}, {"name": "Fabia Monte Carlo 1.5 TSI 150 PS DSG", "cc": 1500, "fatura": 1046924.09, "noter": 4539.8}, {"name": "Fabia Monte Carlo 130 Edition 1.5 TSI 177 PS DSG", "cc": 1500, "fatura": 1149173.01, "noter": 5459.8}, {"name": "Scala Elite 1.0 TSI 115 PS DSG", "cc": 1000, "fatura": 950048.89, "noter": 4109.8}, {"name": "Scala Premium 1.0 TSI 115 PS DSG", "cc": 1000, "fatura": 1064053.52, "noter": 4609.8}, {"name": "Scala Premium 1.5 TSI 150 PS DSG", "cc": 1500, "fatura": 1118067.97, "noter": 5119.8}, {"name": "Scala Monte Carlo 1.5 TSI 150 PS DSG", "cc": 1500, "fatura": 1213111.84, "noter": 5559.8}, {"name": "Kamiq Elite 1.0 TSI 115 PS DSG", "cc": 1000, "fatura": 937903.25, "noter": 4299.8}, {"name": "Kamiq Premium 1.0 TSI 115 PS DSG", "cc": 1000, "fatura": 1026544.03, "noter": 5139.8}, {"name": "Kamiq Premium 1.5 TSI 150 PS DSG", "cc": 1500, "fatura": 1080795.48, "noter": 5419.8}, {"name": "Kamiq Monte Carlo 1.5 TSI 150 PS DSG", "cc": 1500, "fatura": 1160655.2, "noter": 5759.8}, {"name": "Octavia Elite 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1099146.99, "noter": 5559.8}, {"name": "Octavia Premium 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1139552.25, "noter": 6319.8}, {"name": "Octavia Prestige 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1510243.61, "noter": 6919.8}, {"name": "Octavia Sportline 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1510243.61, "noter": 6919.8}, {"name": "Octavia RS 2.0 TSI 265 PS DSG", "cc": 1999, "fatura": 1737771.69, "noter": 11339.8}, {"name": "Octavia Combi Sportline 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1553445.36, "noter": 7119.8}, {"name": "Octavia Combi RS 2.0 TSI 265 PS DSG", "cc": 1999, "fatura": 1768172.92, "noter": 11539.8}, {"name": "Karoq Premium 1.5 TSI 150 PS DSG", "cc": 1500, "fatura": 1239377.79, "noter": 6499.8}, {"name": "Karoq Prestige 1.5 TSI 150 PS DSG", "cc": 1500, "fatura": 1450970.65, "noter": 7279.8}, {"name": "Karoq Sportline 1.5 TSI 150 PS DSG", "cc": 1500, "fatura": 1622928.26, "noter": 7479.8}, {"name": "Kodiaq Premium 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1635369.56, "noter": 8099.8}, {"name": "Kodiaq Prestige 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1825586.62, "noter": 9499.8}, {"name": "Kodiaq Sportline 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1975369.56, "noter": 9799.8}, {"name": "Kodiaq Prestige 2.0 TDI SCR 193 PS DSG 4x4", "cc": 1999, "fatura": 1971714.44, "noter": 13499.8}, {"name": "Kodiaq Sportline 2.0 TDI SCR 193 PS DSG 4x4", "cc": 1999, "fatura": 2044245.3, "noter": 13999.8}, {"name": "Kodiaq RS 2.0 TSI 265 PS DSG 4x4", "cc": 1999, "fatura": 2160294.68, "noter": 14799.8}, {"name": "Superb Premium 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1646329.13, "noter": 7549.8}, {"name": "Superb Prestige 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1813714.89, "noter": 9299.8}, {"name": "Superb Sportline 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1783818.49, "noter": 9489.8}, {"name": "Superb L&K Crystal 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 2147884.39, "noter": 10199.8}, {"name": "Superb L&K Crystal 2.0 TDI SCR 193 PS DSG 4x4", "cc": 1999, "fatura": 2215071.07, "noter": 14199.8}, {"name": "Superb L&K Crystal 2.0 TSI 265 PS DSG 4x4", "cc": 1999, "fatura": 2245472.3, "noter": 14399.8}, {"name": "Superb Combi Prestige 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 1859214.89, "noter": 9539.8}, {"name": "Superb Combi L&K Crystal 1.5 TSI mHEV 150 PS DSG", "cc": 1500, "fatura": 2197134.39, "noter": 10439.8}, {"name": "Superb Combi L&K Crystal 2.0 TDI SCR 193 PS DSG 4x4", "cc": 1999, "fatura": 2251552.55, "noter": 14439.8}, {"name": "Superb Combi L&K Crystal 2.0 TSI 265 PS DSG 4x4", "cc": 1999, "fatura": 2281953.77, "noter": 14639.8}, {"name": "Elroq 60 e-Prestige 190 PS", "cc": "ELEKTRLİKLİ", "fatura": 1744537.52, "noter": 6399.8}, {"name": "Enyaq 60 e-Prestige 190 PS", "cc": "ELEKTRLİKLİ", "fatura": 1980242.33, "noter": 7699.8}, {"name": "Enyaq Coupé 60 e-Sportline 190 PS", "cc": "ELEKTRLİKLİ", "fatura": 2029167.06, "noter": 7899.8}, {"name": "Enyaq Coupé e-RS 340 PS 4x4", "cc": "ELEKTRLİKLİ", "fatura": 2501830.06, "noter": 10999.8}]
+;
+
+const FATURA_HISTORY = {"Fabia Premium 1.0 TSI 115 PS DSG": [{"since": "2026-07-02", "fatura": 892243.4}, {"since": "2026-08-03", "fatura": 911287.32}, {"since": "2026-08-18", "fatura": 911287.32}], "Fabia Monte Carlo 1.5 TSI 150 PS DSG": [{"since": "2026-07-02", "fatura": 1046924.09}, {"since": "2026-08-03", "fatura": 1046924.09}, {"since": "2026-08-18", "fatura": 1046924.09}], "Fabia Monte Carlo 130 Edition 1.5 TSI 177 PS DSG": [{"since": "2026-07-02", "fatura": 1149173.01}, {"since": "2026-08-03", "fatura": 1149173.01}, {"since": "2026-08-18", "fatura": 1149173.01}], "Scala Elite 1.0 TSI 115 PS DSG": [{"since": "2026-07-02", "fatura": 915847.28}, {"since": "2026-08-03", "fatura": 931808.15}, {"since": "2026-08-18", "fatura": 931808.15}], "Scala Premium 1.0 TSI 115 PS DSG": [{"since": "2026-07-02", "fatura": 1025291.95}, {"since": "2026-08-03", "fatura": 1045812.78}, {"since": "2026-08-18", "fatura": 1045812.78}], "Scala Premium 1.5 TSI 150 PS DSG": [{"since": "2026-07-02", "fatura": 1083405.58}, {"since": "2026-08-03", "fatura": 1101646.32}, {"since": "2026-08-18", "fatura": 1101646.32}], "Scala Monte Carlo 1.5 TSI 150 PS DSG": [{"since": "2026-07-02", "fatura": 1161269.73}, {"since": "2026-08-03", "fatura": 1182870.61}, {"since": "2026-08-18", "fatura": 1182870.61}], "Kamiq Elite 1.0 TSI 115 PS DSG": [{"since": "2026-07-02", "fatura": 916375.47}, {"since": "2026-08-03", "fatura": 916375.47}, {"since": "2026-08-18", "fatura": 916375.47}], "Kamiq Premium 1.0 TSI 115 PS DSG": [{"since": "2026-07-02", "fatura": 988898.31}, {"since": "2026-08-03", "fatura": 1006807.19}, {"since": "2026-08-18", "fatura": 1006807.19}], "Kamiq Premium 1.5 TSI 150 PS DSG": [{"since": "2026-07-02", "fatura": 1041321.8}, {"since": "2026-08-03", "fatura": 1061058.64}, {"since": "2026-08-18", "fatura": 1061058.64}], "Kamiq Monte Carlo 1.5 TSI 150 PS DSG": [{"since": "2026-07-02", "fatura": 1118747.3}, {"since": "2026-08-03", "fatura": 1140699.06}, {"since": "2026-08-18", "fatura": 1140699.06}], "Octavia Elite 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1099810.1}, {"since": "2026-08-03", "fatura": 1081581.2}, {"since": "2026-08-18", "fatura": 1081581.2}], "Octavia Premium 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1116374.62}, {"since": "2026-08-03", "fatura": 1139552.25}, {"since": "2026-08-18", "fatura": 1139552.25}], "Octavia Prestige 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1482162.46}, {"since": "2026-08-03", "fatura": 1510243.61}, {"since": "2026-08-18", "fatura": 1510243.61}], "Octavia Sportline 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1482162.46}, {"since": "2026-08-03", "fatura": 1510243.61}, {"since": "2026-08-18", "fatura": 1510243.61}], "Octavia RS 2.0 TSI 265 PS DSG": [{"since": "2026-07-02", "fatura": 1702810.27}, {"since": "2026-08-03", "fatura": 1737771.69}, {"since": "2026-08-18", "fatura": 1737771.69}], "Octavia Combi Sportline 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1525364.21}, {"since": "2026-08-03", "fatura": 1553445.36}, {"since": "2026-08-18", "fatura": 1553445.36}], "Octavia Combi RS 2.0 TSI 265 PS DSG": [{"since": "2026-07-02", "fatura": 1733211.51}, {"since": "2026-08-03", "fatura": 1768172.92}, {"since": "2026-08-18", "fatura": 1768172.92}], "Karoq Premium 1.5 TSI 150 PS DSG": [{"since": "2026-07-02", "fatura": 1239377.79}, {"since": "2026-08-03", "fatura": 1239377.79}, {"since": "2026-08-18", "fatura": 1239377.79}], "Karoq Prestige 1.5 TSI 150 PS DSG": [{"since": "2026-07-02", "fatura": 1391709.31}, {"since": "2026-08-03", "fatura": 1418726.86}, {"since": "2026-08-18", "fatura": 1418726.86}], "Karoq Sportline 1.5 TSI 150 PS DSG": [{"since": "2026-07-02", "fatura": 1592840.55}, {"since": "2026-08-03", "fatura": 1622928.26}, {"since": "2026-08-18", "fatura": 1622928.26}], "Kodiaq Premium 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1615169.64}, {"since": "2026-08-03", "fatura": 1635369.56}, {"since": "2026-08-18", "fatura": 1635369.56}], "Kodiaq Prestige 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1777930.36}, {"since": "2026-08-03", "fatura": 1825586.62}, {"since": "2026-08-18", "fatura": 1825586.62}], "Kodiaq Sportline 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1925369.56}, {"since": "2026-08-03", "fatura": 1975369.56}, {"since": "2026-08-18", "fatura": 1975369.56}], "Kodiaq Prestige 2.0 TDI SCR 193 PS DSG 4x4": [{"since": "2026-07-02", "fatura": 1935449.0}, {"since": "2026-08-03", "fatura": 1971714.44}, {"since": "2026-08-18", "fatura": 1971714.44}], "Kodiaq Sportline 2.0 TDI SCR 193 PS DSG 4x4": [{"since": "2026-07-02", "fatura": 2007979.87}, {"since": "2026-08-03", "fatura": 2044245.3}, {"since": "2026-08-18", "fatura": 2044245.3}], "Kodiaq RS 2.0 TSI 265 PS DSG 4x4": [{"since": "2026-07-02", "fatura": 2109523.08}, {"since": "2026-08-03", "fatura": 2160294.68}, {"since": "2026-08-18", "fatura": 2160294.68}], "Superb Premium 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1646329.13}, {"since": "2026-08-03", "fatura": 1646329.13}, {"since": "2026-08-18", "fatura": 1646329.13}], "Superb Prestige 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1764600.88}, {"since": "2026-08-03", "fatura": 1777694.06}, {"since": "2026-08-18", "fatura": 1777694.06}], "Superb Sportline 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1745524.07}, {"since": "2026-08-03", "fatura": 1748391.41}, {"since": "2026-08-18", "fatura": 1748391.41}], "Superb L&K Crystal 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 2063748.98}, {"since": "2026-08-03", "fatura": 2108894.81}, {"since": "2026-08-18", "fatura": 2108894.81}], "Superb L&K Crystal 2.0 TDI SCR 193 PS DSG 4x4": [{"since": "2026-07-02", "fatura": 2134507.8}, {"since": "2026-08-03", "fatura": 2172509.34}, {"since": "2026-08-18", "fatura": 2172509.34}], "Superb L&K Crystal 2.0 TSI 265 PS DSG 4x4": [{"since": "2026-07-02", "fatura": 2164909.03}, {"since": "2026-08-03", "fatura": 2202910.58}, {"since": "2026-08-18", "fatura": 2202910.58}], "Superb Combi Prestige 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 1810850.88}, {"since": "2026-08-03", "fatura": 1823194.06}, {"since": "2026-08-18", "fatura": 1823194.06}], "Superb Combi L&K Crystal 1.5 TSI mHEV 150 PS DSG": [{"since": "2026-07-02", "fatura": 2112998.98}, {"since": "2026-08-03", "fatura": 2158144.81}, {"since": "2026-08-18", "fatura": 2158144.81}], "Superb Combi L&K Crystal 2.0 TDI SCR 193 PS DSG 4x4": [{"since": "2026-07-02", "fatura": 2170989.27}, {"since": "2026-08-03", "fatura": 2208990.83}, {"since": "2026-08-18", "fatura": 2208990.83}], "Superb Combi L&K Crystal 2.0 TSI 265 PS DSG 4x4": [{"since": "2026-07-02", "fatura": 2201390.51}, {"since": "2026-08-03", "fatura": 2239392.06}, {"since": "2026-08-18", "fatura": 2239392.06}], "Elroq 60 e-Prestige 190 PS": [{"since": "2026-07-02", "fatura": 1684873.53}, {"since": "2026-08-03", "fatura": 1744537.52}, {"since": "2026-08-18", "fatura": 1744537.52}], "Enyaq 60 e-Prestige 190 PS": [{"since": "2026-07-02", "fatura": 1906855.23}, {"since": "2026-08-03", "fatura": 1980242.33}, {"since": "2026-08-18", "fatura": 1980242.33}], "Enyaq Coupé 60 e-Sportline 190 PS": [{"since": "2026-07-02", "fatura": 1955779.96}, {"since": "2026-08-03", "fatura": 2029167.06}, {"since": "2026-08-18", "fatura": 2029167.06}], "Enyaq Coupé e-RS 340 PS 4x4": [{"since": "2026-07-02", "fatura": 2433972.92}, {"since": "2026-08-03", "fatura": 2501830.06}, {"since": "2026-08-18", "fatura": 2501830.06}]}
+;
+
+const CAMPAIGN = {"Fabia Premium 1.0 TSI 115 PS DSG": {"flat": 4.0}, "Fabia Monte Carlo 1.5 TSI 150 PS DSG": {"flat": 5.5}, "Fabia Monte Carlo 130 Edition 1.5 TSI 177 PS DSG": {"flat": 4.3}, "Scala Elite 1.0 TSI 115 PS DSG": {"flat": 3.5}, "Scala Premium 1.0 TSI 115 PS DSG": {"flat": 0}, "Scala Premium 1.5 TSI 150 PS DSG": {"flat": 0}, "Scala Monte Carlo 1.5 TSI 150 PS DSG": {"flat": 10.0}, "Kamiq Elite 1.0 TSI 115 PS DSG": {"flat": 3.5}, "Kamiq Premium 1.0 TSI 115 PS DSG": {"bands": [{"since": "2026-08-03", "pct": 8.1}, {"since": "2026-07-02", "pct": 6.4}, {"since": null, "pct": 0}]}, "Kamiq Premium 1.5 TSI 150 PS DSG": {"flat": 0}, "Kamiq Monte Carlo 1.5 TSI 150 PS DSG": {"bands": [{"since": "2026-08-03", "pct": 6.0}, {"since": "2026-07-02", "pct": 4.4}, {"since": null, "pct": 4.4}]}, "Octavia Elite 1.5 TSI mHEV 150 PS DSG": {"flat": 0}, "Octavia Premium 1.5 TSI mHEV 150 PS DSG": {"flat": 0}, "Octavia Prestige 1.5 TSI mHEV 150 PS DSG": {"flat": 0}, "Octavia Sportline 1.5 TSI mHEV 150 PS DSG": {"flat": 0}, "Octavia RS 2.0 TSI 265 PS DSG": {"flat": 0}, "Octavia Combi Sportline 1.5 TSI mHEV 150 PS DSG": {"flat": 0}, "Octavia Combi RS 2.0 TSI 265 PS DSG": {"flat": 0}, "Karoq Premium 1.5 TSI 150 PS DSG": {"bands": [{"since": "2026-08-31", "pct": 0}, {"since": "2026-08-01", "pct": 0}, {"since": "2026-07-02", "pct": 0}, {"since": "2026-06-01", "pct": 0}, {"since": null, "pct": 2.0}]}, "Karoq Prestige 1.5 TSI 150 PS DSG": {"bands": [{"since": "2026-08-31", "pct": 7.0}, {"since": "2026-08-01", "pct": 11.5}, {"since": "2026-07-02", "pct": 10.0}, {"since": "2026-06-01", "pct": 19.5}, {"since": null, "pct": 18.0}]}, "Karoq Sportline 1.5 TSI 150 PS DSG": {"flat": 10.0}, "Kodiaq Premium 1.5 TSI mHEV 150 PS DSG": {"flat": 0}, "Kodiaq Prestige 1.5 TSI mHEV 150 PS DSG": {"bands": [{"since": "2026-08-03", "pct": 9.7}, {"since": null, "pct": 7.2}]}, "Kodiaq Sportline 1.5 TSI mHEV 150 PS DSG": {"flat": 2.5}, "Kodiaq Prestige 2.0 TDI SCR 193 PS DSG 4x4": {"flat": 2.5}, "Kodiaq Sportline 2.0 TDI SCR 193 PS DSG 4x4": {"flat": 2.5}, "Kodiaq RS 2.0 TSI 265 PS DSG 4x4": {"flat": 2.5}, "Superb Premium 1.5 TSI mHEV 150 PS DSG": {"flat": 0}, "Superb Prestige 1.5 TSI mHEV 150 PS DSG": {"bands": [{"since": "2026-09-01", "pct": 9.1}, {"since": "2026-08-03", "pct": 7.2}, {"since": null, "pct": 6.5}]}, "Superb Sportline 1.5 TSI mHEV 150 PS DSG": {"bands": [{"since": "2026-09-01", "pct": 8.3}, {"since": "2026-08-03", "pct": 6.5}, {"since": null, "pct": 6.5}]}, "Superb L&K Crystal 1.5 TSI mHEV 150 PS DSG": {"flat": 10.0}, "Superb L&K Crystal 2.0 TDI SCR 193 PS DSG 4x4": {"flat": 0}, "Superb L&K Crystal 2.0 TSI 265 PS DSG 4x4": {"flat": 0}, "Superb Combi Prestige 1.5 TSI mHEV 150 PS DSG": {"bands": [{"since": "2026-09-01", "pct": 9.1}, {"since": "2026-08-03", "pct": 7.2}, {"since": null, "pct": 6.5}]}, "Superb Combi L&K Crystal 1.5 TSI mHEV 150 PS DSG": {"flat": 10.0}, "Superb Combi L&K Crystal 2.0 TDI SCR 193 PS DSG 4x4": {"flat": 0}, "Superb Combi L&K Crystal 2.0 TSI 265 PS DSG 4x4": {"flat": 0}, "Elroq 60 e-Prestige 190 PS": {"flat": 5.5}, "Enyaq 60 e-Prestige 190 PS": {"flat": 0}, "Enyaq Coupé 60 e-Sportline 190 PS": {"flat": 0}, "Enyaq Coupé e-RS 340 PS 4x4": {"flat": 0}}
+;
+
+const TIERS = {
+  1000: { plaka: 11650, bands: [[650000,70],[900000,75],[1100000,80],[Infinity,90]] },
+  1500: { plaka: 14500, bands: [[850000,75],[1100000,80],[1650000,90],[Infinity,100]] },
+  1999: { plaka: 35000, bands: [[1650000,150],[Infinity,170]] },
+  'ELEKTRLİKLİ': { plaka: 14500, bands: [[1650000,25],[Infinity,55]], highPowerThresholdPS: 300, highPowerRate: 75 }
+};
+
+function extractPS(name){
+  const m = name.match(/(\d+)\s*PS/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function todayStr(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function lookupCampaignPct(name, dateStr){
+  const entry = CAMPAIGN[name];
+  if(!entry) return 0;
+  if(entry.flat !== undefined) return entry.flat;
+  for(const band of entry.bands){
+    if(band.since === null || dateStr >= band.since) return band.pct;
+  }
+  return entry.bands[entry.bands.length-1].pct;
+}
+
+let state = {
+  model: null,
+  kamu: 1.0,
+  bayi: 1.5,
+  kamp: 0.0,
+  faturaDonem: '2026-09-01',
+  activeFatura: null,
+  matrahDestegi: false
+};
+
+function fmtTL(n, decimals){
+  decimals = decimals === undefined ? 0 : decimals;
+  return '₺' + n.toLocaleString('tr-TR', {minimumFractionDigits:decimals, maximumFractionDigits:decimals});
+}
+function fmtCC(cc){
+  return cc === 'ELEKTRLİKLİ' ? 'Elektrikli' : cc + ' cc';
+}
+function seriesOf(name){
+  return name.split(' ')[0];
+}
+
+function openModal(id){ document.getElementById(id).classList.add('show'); }
+function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+function openModelModal(){
+  document.getElementById('searchInput').value = '';
+  renderModelList();
+  openModal('modelOverlay');
+  setTimeout(()=>document.getElementById('searchInput').focus(), 60);
+}
+
+function renderModelList(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = MODELS.filter(m => m.name.toLowerCase().includes(q));
+  const groups = {};
+  filtered.forEach(m => {
+    const s = seriesOf(m.name);
+    if(!groups[s]) groups[s] = [];
+    groups[s].push(m);
+  });
+  const container = document.getElementById('modelList');
+  if(filtered.length === 0){
+    container.innerHTML = '<div class="no-results">Eşleşen model bulunamadı.</div>';
+    return;
+  }
+  let html = '';
+  Object.keys(groups).sort().forEach(series => {
+    html += `<div class="series-group-label" style="padding:9px 16px;background:var(--paper-2);font-size:11px;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;color:var(--forest-700);">${series}</div>`;
+    groups[series].forEach(m => {
+      html += `<button class="model-row" onclick="selectModel('${m.name.replace(/'/g,"\\'")}')">
+        <span class="mname">${m.name}</span>
+        <span class="mtag">${fmtCC(m.cc)} · ${fmtTL(m.fatura)}</span>
+      </button>`;
+    });
+  });
+  container.innerHTML = html;
+}
+
+function selectModel(name){
+  const m = MODELS.find(x => x.name === name);
+  if(!m) return;
+  state.model = m;
+  state.faturaDonem = '2026-09-01';
+  state.activeFatura = m.fatura;
+  state.kamp = lookupCampaignPct(m.name, state.faturaDonem);
+  state.matrahDestegi = false;
+  closeModal('modelOverlay');
+  updateVehicleBar();
+  openParamModal();
+}
+
+function faturaForDonem(name, since){
+  if(since === '2026-09-01'){
+    const m = MODELS.find(x => x.name === name);
+    return m ? m.fatura : null;
+  }
+  const hist = FATURA_HISTORY[name];
+  if(!hist) return null;
+  const entry = hist.find(e => e.since === since);
+  return entry ? entry.fatura : null;
+}
+
+function openCustomModal(){
+  document.getElementById('customName').value = '';
+  document.getElementById('customFatura').value = '';
+  document.getElementById('customNoter').value = '';
+  document.getElementById('customCC').value = '1500';
+  openModal('customOverlay');
+  setTimeout(()=>document.getElementById('customFatura').focus(), 60);
+}
+
+function submitCustomPrice(){
+  const faturaRaw = document.getElementById('customFatura').value;
+  const fatura = parseFloat(faturaRaw);
+  if(!faturaRaw || isNaN(fatura) || fatura <= 0){
+    alert('Lütfen geçerli bir fatura bedeli girin.');
+    document.getElementById('customFatura').focus();
+    return;
+  }
+  const ccRaw = document.getElementById('customCC').value;
+  const cc = ccRaw === 'ELEKTRLİKLİ' ? 'ELEKTRLİKLİ' : Number(ccRaw);
+  const noterRaw = document.getElementById('customNoter').value;
+  const noter = noterRaw ? parseFloat(noterRaw) : 0;
+  const label = document.getElementById('customName').value.trim() || 'Özel Fiyat Girişi';
+
+  state.model = { name: label, cc: cc, fatura: fatura, noter: noter, custom: true };
+  state.kamp = 0;
+  state.activeFatura = fatura;
+  state.matrahDestegi = false;
+
+  closeModal('customOverlay');
+  updateVehicleBar();
+  openParamModal();
+}
+
+function updateVehicleBar(){
+  const m = state.model;
+  document.getElementById('vbName').textContent = m.name + (m.custom ? '  ·  Özel Giriş' : '');
+  document.getElementById('vbCC').textContent = fmtCC(m.cc);
+  document.getElementById('vbFatura').textContent = 'DS Fatura: ' + fmtTL(state.activeFatura !== null ? state.activeFatura : m.fatura);
+  document.getElementById('vehicleBar').classList.add('show');
+  document.getElementById('emptyHero').style.display = 'none';
+  document.getElementById('compareSection').style.display = 'none';
+}
+
+function openParamModal(){
+  const isCustom = state.model && state.model.custom;
+  document.getElementById('tarihField').style.display = isCustom ? 'none' : '';
+  if(!isCustom){
+    document.getElementById('faturaDonem').value = state.faturaDonem;
+  }
+  document.getElementById('kamuRange').value = state.kamu;
+  document.getElementById('bayiRange').value = state.bayi;
+  document.getElementById('kampRange').value = state.kamp;
+  document.getElementById('matrahDestegi').checked = state.matrahDestegi;
+  syncParamInputs('kamu');
+  syncParamInputs('bayi');
+  syncParamInputs('kamp');
+  openModal('paramOverlay');
+}
+
+function onFaturaDonemChange(){
+  if(!state.model || state.model.custom) return;
+  state.faturaDonem = document.getElementById('faturaDonem').value;
+  const fatura = faturaForDonem(state.model.name, state.faturaDonem);
+  if(fatura !== null) state.activeFatura = fatura;
+  const pct = lookupCampaignPct(state.model.name, state.faturaDonem);
+  document.getElementById('kampRange').value = pct;
+  syncParamInputs('kamp');
+}
+
+function paramLimits(which){
+  return which === 'kamp' ? [0, 20] : [0, 10];
+}
+function clampRound(v, min, max){
+  v = Math.round(v * 10) / 10;
+  if(v < min) v = min;
+  if(v > max) v = max;
+  return v;
+}
+function clampFine(v, min, max){
+  v = Math.round(v * 100) / 100;
+  if(v < min) v = min;
+  if(v > max) v = max;
+  return v;
+}
+function stepParam(which, delta){
+  const rangeEl = document.getElementById(which + 'Range');
+  const [min, max] = paramLimits(which);
+  const v = clampRound((parseFloat(rangeEl.value) || 0) + delta, min, max);
+  rangeEl.value = v;
+  syncParamInputs(which);
+}
+function manualParam(which){
+  const inputEl = document.getElementById(which + 'Input');
+  const rangeEl = document.getElementById(which + 'Range');
+  const [min, max] = paramLimits(which);
+  let v = parseFloat(inputEl.value.replace(',', '.'));
+  if(isNaN(v)) v = parseFloat(rangeEl.value) || 0;
+  v = clampFine(v, min, max);
+  rangeEl.value = v;
+  syncParamInputs(which);
+}
+
+function syncParamInputs(which){
+  if(which==='kamu'){
+    const v = parseFloat(document.getElementById('kamuRange').value);
+    document.getElementById('kamuChip').textContent = '%' + v.toFixed(2);
+    document.getElementById('kamuInput').value = v.toFixed(2);
+  }
+  if(which==='bayi'){
+    const v = parseFloat(document.getElementById('bayiRange').value);
+    document.getElementById('bayiChip').textContent = '%' + v.toFixed(2);
+    document.getElementById('bayiInput').value = v.toFixed(2);
+  }
+  if(which==='kamp'){
+    const v = parseFloat(document.getElementById('kampRange').value);
+    document.getElementById('kampChip').textContent = '%' + v.toFixed(2);
+    document.getElementById('kampInput').value = v.toFixed(2);
+  }
+  const kamu = parseFloat(document.getElementById('kamuRange').value) || 0;
+  const kamp = parseFloat(document.getElementById('kampRange').value) || 0;
+  document.getElementById('tabanWarning').style.display = (kamu + kamp) > 10 ? 'block' : 'none';
+}
+
+function applyParams(){
+  state.kamu = parseFloat(document.getElementById('kamuRange').value);
+  state.bayi = parseFloat(document.getElementById('bayiRange').value);
+  state.kamp = parseFloat(document.getElementById('kampRange').value);
+  state.matrahDestegi = document.getElementById('matrahDestegi').checked;
+  closeModal('paramOverlay');
+  calculate();
+}
+
+function lookupOtvRate(cc, taxBase, ps){
+  const tier = TIERS[cc];
+  if(cc === 'ELEKTRLİKLİ' && ps && tier.highPowerThresholdPS && ps >= tier.highPowerThresholdPS){
+    return tier.highPowerRate;
+  }
+  for(const [upper, rate] of tier.bands){
+    if(taxBase <= upper) return rate;
+  }
+  return tier.bands[tier.bands.length-1][1];
+}
+function lookupPlaka(cc){
+  return TIERS[cc].plaka;
+}
+
+function computeBreakdown(B, cc, noter, kampPct, kamuPct, bayiPct, ps, matrahDestegi){
+  const D = kampPct/100, E = kamuPct/100, G = bayiPct/100;
+  const T = B * 0.9;                          // ÖTV Matrahı En Düşük Bedel
+  const W = B * D;
+  const X = E * B;
+  const Y = T * G;
+  const H = B - W - X;
+  const I = H - Y;
+  // Matrah Desteği geçerliyse (Yüce Auto matrah farkını karşılıyorsa) taban devreye girmez,
+  // ÖTV doğrudan gerçek indirimli tutardan (H) hesaplanır. Aksi halde %90 taban uygulanır.
+  const taxBase = matrahDestegi ? H : Math.max(H, T);
+  const J = lookupOtvRate(cc, taxBase, ps);
+  const K = taxBase * J / 100;
+  const M = I + K;
+  const N = M * 1.2;
+  const O = lookupPlaka(cc);
+  const P = N + O;
+  const Q = noter;
+  const R = P + Q;
+  const S = T * (1 - G);
+  return {B,T,W,X,Y,H,I,taxBase,J,K,M,N,O,P,Q,R,S};
+}
+
+function calculate(){
+  const m = state.model;
+  const ps = extractPS(m.name);
+  const faturaB = state.activeFatura !== null ? state.activeFatura : m.fatura;
+  const r = computeBreakdown(faturaB, m.cc, m.noter, state.kamp, state.kamu, state.bayi, ps, state.matrahDestegi);
+  const {B,T,W,X,Y,H,I,taxBase,J,K,M,N,O,P,Q,R,S} = r;
+  const D = state.kamp/100, E = state.kamu/100, G = state.bayi/100;
+
+  document.getElementById('heroTotal').innerHTML = fmtTL(R) + ' <small>harç dahil anahtar teslim</small>';
+  document.getElementById('cardOtvRate').textContent = '%' + J;
+  document.getElementById('cardOtvAmount').textContent = fmtTL(K);
+  document.getElementById('cardWithVat').textContent = fmtTL(N);
+
+  document.getElementById('tablePricing').innerHTML = `
+    <tr><td class="label">DS Fatura Bedeli</td><td class="val">${fmtTL(B)}</td></tr>
+    <tr><td class="sub">Otomatik kampanya + YS bonus (%${(D*100).toFixed(1)})</td><td class="val">− ${fmtTL(W)}</td></tr>
+    <tr><td class="sub">Kamu / daimi indirimi (%${(E*100).toFixed(1)})</td><td class="val">− ${fmtTL(X)}</td></tr>
+    <tr class="total"><td class="label">İndirimli Tutar</td><td class="val">${fmtTL(H)}</td></tr>
+    <tr><td class="sub">Bayi özel indirimi (%${(G*100).toFixed(1)}, ÖTV matrahı üzerinden)</td><td class="val">− ${fmtTL(Y)}</td></tr>
+    <tr class="total"><td class="label">Bayi Özel İndirimli Tutar</td><td class="val">${fmtTL(I)}</td></tr>
+  `;
+
+  const floorActive = taxBase > H + 0.5;
+  const matrahLabel = state.matrahDestegi
+    ? '(Matrah Desteği — taban uygulanmadı)'
+    : (floorActive ? '(⚠ taban devrede)' : '(İndirimli Tutar)');
+  const matrahRowStyle = state.matrahDestegi ? 'background:#e9f3e3;' : (floorActive ? 'background:#fdf0e0;' : '');
+  document.getElementById('tableTax').innerHTML = `
+    <tr><td class="label">ÖTV Matrahı En Düşük Bedel (Fatura × 0,90)</td><td class="val">${fmtTL(T)}</td></tr>
+    <tr><td class="sub">%10'dan fazla indirimde dahi ÖTV bu tabandan hesaplanır — Matrah Desteği hariç</td><td class="val"></td></tr>
+    <tr><td class="label">Silindir Hacmi / Özellik${ps ? ' ('+ps+' PS)' : ''}</td><td class="val">${fmtCC(m.cc)}</td></tr>
+    <tr class="total" style="${matrahRowStyle}"><td class="label">Kullanılan ÖTV Matrahı ${matrahLabel}</td><td class="val">${fmtTL(taxBase)}</td></tr>
+    <tr><td class="label">Uygulanan ÖTV Oranı</td><td class="val">%${J}</td></tr>
+    <tr class="total"><td class="label">Beyan ÖTV Tutarı</td><td class="val">${fmtTL(K)}</td></tr>
+  `;
+
+  document.getElementById('tableFinal').innerHTML = `
+    <tr><td class="label">Araç + ÖTV</td><td class="val">${fmtTL(M)}</td></tr>
+    <tr><td class="label">Araç + ÖTV + KDV (%20)</td><td class="val">${fmtTL(N)}</td></tr>
+    <tr><td class="label">Plaka Masrafları</td><td class="val">${fmtTL(O)}</td></tr>
+    <tr class="total"><td class="label">Anahtar Teslim Fiyatı</td><td class="val">${fmtTL(P)}</td></tr>
+    <tr><td class="label">Noter Harcı</td><td class="val">${fmtTL(Q, 2)}</td></tr>
+    <tr class="total"><td class="label">Harç Dahil Toplam</td><td class="val">${fmtTL(R)}</td></tr>
+  `;
+
+  document.getElementById('tableDealer').innerHTML = `
+    <tr><td class="label">Bayi Özel Hesaplama (Matrah × (1 − indirim))</td><td class="val">${fmtTL(S)}</td></tr>
+  `;
+
+  document.getElementById('results').classList.add('show');
+  document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function openCompareModal(){
+  if(!state.model){ return; }
+  document.getElementById('compareCurrentLabel').textContent = fmtTL(state.activeFatura !== null ? state.activeFatura : state.model.fatura);
+  document.getElementById('compareOld').value = '';
+  openModal('compareOverlay');
+  setTimeout(()=>document.getElementById('compareOld').focus(), 60);
+}
+
+function submitCompare(){
+  const oldRaw = document.getElementById('compareOld').value;
+  const oldFatura = parseFloat(oldRaw);
+  if(!oldRaw || isNaN(oldFatura) || oldFatura <= 0){
+    alert('Lütfen geçerli bir eski fatura bedeli girin.');
+    document.getElementById('compareOld').focus();
+    return;
+  }
+  const m = state.model;
+  const ps = extractPS(m.name);
+  const rNew = computeBreakdown(state.activeFatura !== null ? state.activeFatura : m.fatura, m.cc, m.noter, state.kamp, state.kamu, state.bayi, ps, state.matrahDestegi);
+  const rOld = computeBreakdown(oldFatura, m.cc, m.noter, state.kamp, state.kamu, state.bayi, ps, state.matrahDestegi);
+
+  const rows = [
+    ['DS Fatura Bedeli', 'B'],
+    ['İndirimli Tutar', 'H'],
+    ['ÖTV Oranı (%)', 'J', true],
+    ['Beyan ÖTV Tutarı', 'K'],
+    ['Araç + ÖTV + KDV', 'N'],
+    ['Anahtar Teslim Fiyatı', 'P'],
+    ['Harç Dahil Toplam', 'R']
+  ];
+
+  let html = '';
+  rows.forEach(([label, key, isPct]) => {
+    const oldV = rOld[key], newV = rNew[key];
+    const diff = newV - oldV;
+    const diffFmt = isPct ? (diff>=0?'+':'') + diff + ' puan' : (diff>=0?'+ ':'− ') + fmtTL(Math.abs(diff));
+    const diffColor = diff > 0 ? 'var(--amber)' : (diff < 0 ? 'var(--forest-700)' : 'var(--ink-soft)');
+    const isTotal = key === 'R';
+    html += `<tr${isTotal ? ' class="total"' : ''}>
+      <td class="label">${label}</td>
+      <td class="val">${isPct ? '%'+oldV : fmtTL(oldV)}</td>
+      <td class="val">${isPct ? '%'+newV : fmtTL(newV)}</td>
+      <td class="val" style="color:${diffColor};">${diffFmt}</td>
+    </tr>`;
+  });
+
+  document.getElementById('tableCompare').innerHTML = `
+    <tr><td class="label"></td><td class="val" style="color:var(--ink-soft);font-size:12px;">ESKİ</td><td class="val" style="color:var(--ink-soft);font-size:12px;">GÜNCEL</td><td class="val" style="color:var(--ink-soft);font-size:12px;">FARK</td></tr>
+    ${html}
+  `;
+
+  closeModal('compareOverlay');
+  document.getElementById('compareSection').style.display = 'block';
+  document.getElementById('compareSection').scrollIntoView({behavior:'smooth', block:'start'});
+}
+</script>
+</body>
+</html>
