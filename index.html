@@ -112,6 +112,7 @@
   button{
     font-family:inherit;
     cursor:pointer;
+    touch-action:manipulation;
   }
   .btn{
     border:none;
@@ -487,6 +488,7 @@
     padding:0;
     border-radius:10px;
     display:flex; align-items:center; justify-content:center;
+    touch-action:manipulation;
   }
   .step-btn:active{ background:var(--paper-2); }
   .step-btn svg{
@@ -625,6 +627,10 @@
       <button class="credit-card-btn" onclick="openCreditModal()">
         <svg viewBox="0 0 24 24" width="22" height="22"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
         Kredi Hesapla
+      </button>
+      <button class="credit-card-btn" onclick="openCardModal()" style="grid-column:1 / -1;">
+        <svg viewBox="0 0 24 24" width="22" height="22"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
+        Kredi Kartı ile Ödeme
       </button>
     </div>
 
@@ -828,6 +834,41 @@
   </div>
 </div>
 
+<!-- Credit Card Payment Modal -->
+<div class="overlay" id="cardOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Kredi Kartı ile Ödeme</h3>
+      <button class="close" onclick="closeModal('cardOverlay')">&times;</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="field">
+        <label>İşlem Tutarı</label>
+        <div class="stepper">
+          <button type="button" class="step-btn" onclick="stepCardAmount(-10000)" aria-label="Azalt">
+            <svg viewBox="0 0 24 24" width="18" height="18"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+          <div class="step-value-box">
+            <input type="text" inputmode="numeric" class="step-input" id="cardAmountInput" value="0" onchange="renderCardTable()" style="width:130px;">
+            <span class="step-pct">₺</span>
+          </div>
+          <button type="button" class="step-btn" onclick="stepCardAmount(10000)" aria-label="Artır">
+            <svg viewBox="0 0 24 24" width="18" height="18"><line x1="5" y1="12" x2="19" y2="12"/><line x1="12" y1="5" x2="12" y2="19"/></svg>
+          </button>
+        </div>
+        <div class="hint">Kredi Kartından Çekilecek İşlem Tutarını Girin — Aşağıdaki Tüm Vadeler Buna Göre Hesaplanır.</div>
+      </div>
+
+      <div id="cardTableResult"></div>
+
+      <div class="modal-actions">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('cardOverlay')">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Credit Calculator Modal -->
 <div class="overlay" id="creditOverlay">
   <div class="modal">
@@ -838,6 +879,7 @@
     <div class="modal-body">
 
       <div id="creditStep1">
+        <div id="campaignCreditSlot"></div>
         <div class="hint" style="margin-bottom:14px;">Müşteri Tipini Seçin — Kredi Oranı, Vade Sınırı ve Vergi Katsayısı Buna Göre Belirlenir.</div>
         <button class="type-btn" onclick="selectCreditType('bireysel')">
           Bireysel Müşteri
@@ -1125,6 +1167,7 @@ function onFaturaDonemChange(){
   const pct = lookupCampaignPct(state.model.name, state.faturaDonem);
   document.getElementById('kampRange').value = pct;
   syncParamInputs('kamp');
+  document.getElementById('vbFatura').textContent = 'DS Fatura: ' + fmtTL(state.activeFatura !== null ? state.activeFatura : state.model.fatura);
 }
 
 function paramLimits(which){
@@ -1247,7 +1290,7 @@ function calculate(){
     <tr><td class="sub">Kamu / daimi indirimi (%${(E*100).toFixed(1)})</td><td class="val">− ${fmtTL(X)}</td></tr>
     <tr class="total"><td class="label">İndirimli Tutar</td><td class="val">${fmtTL(H)}</td></tr>
     <tr><td class="sub">Bayi özel indirimi (%${(G*100).toFixed(1)}, ÖTV matrahı üzerinden)</td><td class="val">− ${fmtTL(Y)}</td></tr>
-    <tr class="total"><td class="label">Bayi Özel İndirimli Tutar</td><td class="val">${fmtTL(I)}</td></tr>
+    <tr class="total"><td class="label">Vergiler Hariç Net Bedel</td><td class="val">${fmtTL(I)}</td></tr>
   `;
 
   const floorActive = taxBase > H + 0.5;
@@ -1335,6 +1378,88 @@ function submitCompare(){
   document.getElementById('compareSection').style.display = 'block';
   document.getElementById('compareSection').scrollIntoView({behavior:'smooth', block:'start'});
 }
+const KART_TAKSIT = [
+  { label: 'Tek Çekim',  n: 1,  komisyon: 0.0330 },
+  { label: '2 Taksit',   n: 2,  komisyon: 0.0789 },
+  { label: '3 Taksit',   n: 3,  komisyon: 0.0977 },
+  { label: '4 Taksit',   n: 4,  komisyon: 0.1169 },
+  { label: '5 Taksit',   n: 5,  komisyon: 0.1353 },
+  { label: '6 Taksit',   n: 6,  komisyon: 0.1543 },
+  { label: '7 Taksit',   n: 7,  komisyon: 0.1730 },
+  { label: '8 Taksit',   n: 8,  komisyon: 0.1917 },
+  { label: '9 Taksit',   n: 9,  komisyon: 0.2127 },
+  { label: '10 Taksit',  n: 10, komisyon: 0.2299 },
+  { label: '11 Taksit',  n: 11, komisyon: 0.2499 },
+  { label: '12 Taksit',  n: 12, komisyon: 0.2679 }
+];
+
+function cardTutarMax(){ return 50000000; }
+
+function defaultCardAmount(){
+  const m = state.model;
+  if(!m) return 0;
+  const ps = extractPS(m.name);
+  const faturaB = state.activeFatura !== null ? state.activeFatura : m.fatura;
+  const r = computeBreakdown(faturaB, m.cc, m.noter, state.kamp, state.kamu, state.bayi, ps, state.matrahDestegi);
+  return Math.round(r.R);
+}
+
+function openCardModal(){
+  document.getElementById('cardAmountInput').value = defaultCardAmount().toLocaleString('tr-TR');
+  openModal('cardOverlay');
+  renderCardTable();
+}
+
+function stepCardAmount(delta){
+  const raw = document.getElementById('cardAmountInput').value.replace(/\./g, '').replace(/[^\d]/g, '');
+  let v = (parseInt(raw, 10) || 0) + delta;
+  v = Math.max(0, Math.min(v, cardTutarMax()));
+  document.getElementById('cardAmountInput').value = v.toLocaleString('tr-TR');
+  renderCardTable();
+}
+
+function renderCardTable(){
+  const raw = document.getElementById('cardAmountInput').value.replace(/\./g, '').replace(/[^\d]/g, '');
+  let tutar = parseInt(raw, 10) || 0;
+  tutar = Math.max(0, Math.min(tutar, cardTutarMax()));
+  document.getElementById('cardAmountInput').value = tutar.toLocaleString('tr-TR');
+
+  const out = document.getElementById('cardTableResult');
+  if(tutar <= 0){
+    out.innerHTML = '<div class="hint" style="margin-top:16px;">İşlem Tutarı Girin.</div>';
+    return;
+  }
+
+  const rows = KART_TAKSIT.map(function(row){
+    const cektilecek = tutar / (1 - row.komisyon);
+    const aylik = cektilecek / row.n;
+    const vadeFarkiOran = row.komisyon / (1 - row.komisyon);
+    return { label: row.label, n: row.n, komisyon: row.komisyon, vadeFarki: vadeFarkiOran, cektilecek: cektilecek, aylik: aylik };
+  });
+
+  let html = '<div class="section-title" style="margin-top:20px;"><span>Vade Seçenekleri</span></div>';
+  html += '<table class="breakdown">';
+  html += '<tr><td class="label" style="font-size:11px; color:var(--ink-soft); text-transform:uppercase;">Vade</td><td class="val" style="font-size:11px; color:var(--ink-soft); text-transform:uppercase; font-weight:500;">Karttan Çekilecek Tutar</td></tr>';
+  rows.forEach(function(r, idx){
+    const isFirst = idx === 0;
+    html += '<tr' + (isFirst ? ' class="total"' : '') + '>';
+    html += '<td class="label">' + r.label + '</td>';
+    html += '<td class="val">' + fmtTL(r.cektilecek) + '</td>';
+    html += '</tr>';
+    html += '<tr><td class="sub">N Kolay Komisyon %' + (r.komisyon*100).toFixed(2) + ' · Vade Farkı %' + (r.vadeFarki*100).toFixed(2) + (r.n > 1 ? ' · Aylık ' + fmtTL(r.aylik) : '') + '</td><td class="val"></td></tr>';
+  });
+  html += '</table>';
+  html += '<p class="footnote" style="margin-top:14px;">Oranlar banka POS sözleşmesine göre değişiklik gösterebilir. Karttan Çekilecek Tutar = İşlem Tutarı ÷ (1 − N Kolay Komisyon Oranı).</p>';
+  out.innerHTML = html;
+}
+
+const CAMPAIGN_CREDIT = {
+  'Kamiq Premium 1.0 TSI 115 PS DSG': {
+    amount: 200000, ay: 12, faiz: 0.99, tipKey: 'bireysel',
+    label: 'Kampanyalı Bireysel Kredi — Kamiq Premium 1.0 TSI 115 PS DSG'
+  }
+};
+
 const CREDIT_TYPES = {
   'bireysel': {
     label: 'Bireysel Müşteri',
@@ -1362,7 +1487,7 @@ const CREDIT_TYPES = {
   }
 };
 
-let creditState = { type: null, faiz: 3.50, tutar: 0, vade: 12 };
+let creditState = { type: null, faiz: 3.50, tutar: 0, vade: 12, isCampaign: false };
 let lastCreditResult = null;
 
 function creditBase(){
@@ -1408,6 +1533,25 @@ function openCreditModal(){
   if(!state.model){ return; }
   document.getElementById('creditStep1').style.display = '';
   document.getElementById('creditStep2').style.display = 'none';
+
+  const slot = document.getElementById('campaignCreditSlot');
+  const camp = CAMPAIGN_CREDIT[state.model.name];
+  const base = creditBase();
+  if(camp && base < 2000000){
+    slot.innerHTML = `
+      <button class="type-btn" onclick="selectCampaignCredit()" style="background:var(--forest-950); border-color:var(--navy);">
+        <span style="color:var(--lime-500);">🎉 Kampanyalı Krediyi Hesapla</span>
+        <span class="sub" style="color:#c9e8d8;">${fmtTL(camp.amount)} · ${camp.ay} Ay · %${camp.faiz.toFixed(2)} Aylık Faiz</span>
+      </button>
+    `;
+  } else if(camp){
+    slot.innerHTML = `
+      <div class="hint" style="margin-bottom:14px; color:var(--amber); font-weight:700;">⚠ Bu Araç 2.000.000 ₺'yi Aştığı İçin Bireysel Kredi Kampanyası (Dahil Kampanyalı Kredi) Uygulanamaz.</div>
+    `;
+  } else {
+    slot.innerHTML = '';
+  }
+
   openModal('creditOverlay');
 }
 
@@ -1472,10 +1616,42 @@ function bindCreditSwipe(){
   }, {passive:true});
 }
 
+function selectCampaignCredit(){
+  const camp = CAMPAIGN_CREDIT[state.model.name];
+  if(!camp) return;
+  document.getElementById('creditOverLimitWarning').style.display = 'none';
+  const base = creditBase();
+  const t = CREDIT_TYPES[camp.tipKey];
+
+  creditState.type = camp.tipKey;
+  creditState.tutar = camp.amount;
+  creditState.vade = camp.ay;
+  creditState.faiz = camp.faiz;
+  creditState.isCampaign = true;
+
+  document.getElementById('creditTypeLabel').textContent = camp.label;
+  document.getElementById('creditTypeRule').textContent = t.vergi + ' — Kampanya Şartları Sabittir';
+  document.getElementById('creditBaseAmount').textContent = fmtTL(base);
+  document.getElementById('creditFaizInput').value = camp.faiz.toFixed(2);
+  document.getElementById('creditTutarInput').value = camp.amount.toLocaleString('tr-TR');
+
+  const vadeSel = document.getElementById('creditVade');
+  vadeSel.innerHTML = `<option value="${camp.ay}">${camp.ay} Ay</option>`;
+  vadeSel.value = camp.ay;
+  document.getElementById('creditVadeHint').textContent = 'Kampanya Vadesi Sabittir: ' + camp.ay + ' Ay.';
+  document.getElementById('creditTutarHint').textContent = 'Kampanya Kredi Tutarı Sabittir: ' + fmtTL(camp.amount) + '.';
+
+  document.getElementById('creditStep1').style.display = 'none';
+  document.getElementById('creditStep2').style.display = '';
+  bindCreditSwipe();
+  renderCredit();
+}
+
 function selectCreditType(typeKey){
   const base = creditBase();
   const t = CREDIT_TYPES[typeKey];
   const lim = creditLimits(typeKey, base);
+  creditState.isCampaign = false;
   creditState.type = typeKey;
   creditState.tutar = Math.round(lim.maxTutar);
   creditState.vade = lim.vadeler.length ? lim.vadeler[lim.vadeler.length-1] : 0;
@@ -1498,6 +1674,26 @@ function selectCreditType(typeKey){
   renderCredit();
 }
 
+function creditTutarMax(){
+  if(creditState.isCampaign){
+    const camp = CAMPAIGN_CREDIT[state.model.name];
+    return camp ? camp.amount : creditBase();
+  }
+  return creditBase();
+}
+
+function checkCampaignOverLimit(attemptedV){
+  const warnEl = document.getElementById('creditOverLimitWarning');
+  if(!creditState.isCampaign) return;
+  const camp = CAMPAIGN_CREDIT[state.model.name];
+  if(camp && attemptedV > camp.amount){
+    warnEl.style.display = 'block';
+    warnEl.textContent = '⚠ Kampanyalı Kredi Tutarı Aşıldı — Standart Krediyi Müşteri Tipi Seçerek Manuel Hesaplayın.';
+  } else {
+    warnEl.style.display = 'none';
+  }
+}
+
 function stepCredit(which, delta){
   if(which === 'faiz'){
     let v = (parseFloat(document.getElementById('creditFaizInput').value.replace(',', '.')) || 0) + delta;
@@ -1506,8 +1702,9 @@ function stepCredit(which, delta){
   } else {
     const raw = document.getElementById('creditTutarInput').value.replace(/\./g, '').replace(/[^\d]/g, '');
     let v = (parseInt(raw, 10) || 0) + delta;
-    const base = creditBase();
-    v = Math.max(0, Math.min(v, Math.round(base)));
+    checkCampaignOverLimit(v);
+    const maxV = creditTutarMax();
+    v = Math.max(0, Math.min(v, Math.round(maxV)));
     document.getElementById('creditTutarInput').value = v.toLocaleString('tr-TR');
   }
   renderCredit();
@@ -1520,8 +1717,9 @@ function manualCredit(){
 
   const raw = document.getElementById('creditTutarInput').value.replace(/\./g, '').replace(/[^\d]/g, '');
   let t = parseInt(raw, 10) || 0;
-  const base = creditBase();
-  t = Math.max(0, Math.min(t, Math.round(base)));
+  checkCampaignOverLimit(t);
+  const maxV = creditTutarMax();
+  t = Math.max(0, Math.min(t, Math.round(maxV)));
   document.getElementById('creditTutarInput').value = t.toLocaleString('tr-TR');
   renderCredit();
 }
@@ -1531,6 +1729,7 @@ function renderCredit(){
   const t = CREDIT_TYPES[creditState.type];
   const lim = creditLimits(creditState.type, base);
   const out = document.getElementById('creditResult');
+  const isCampaign = creditState.isCampaign;
 
   if(lim.kapali){
     out.innerHTML = `<div style="background:#fdf0e0; border-left:3px solid var(--amber); padding:12px 14px; font-size:13px; color:#7a4a12; margin:16px 0;">⚠ ${lim.note}</div>`;
@@ -1543,7 +1742,9 @@ function renderCredit(){
   const n = parseInt(document.getElementById('creditVade').value, 10) || 0;
 
   const warnEl = document.getElementById('creditOverLimitWarning');
-  if(P > lim.maxTutar + 0.5){
+  if(isCampaign){
+    // Kampanya modunda uyarı checkCampaignOverLimit() tarafından yönetiliyor, burada dokunulmuyor.
+  } else if(P > lim.maxTutar + 0.5){
     warnEl.style.display = 'block';
     warnEl.textContent = '⚠ Bu Tutar, ' + t.label + ' İçin Tipik Azami Kredi Tutarını (' + fmtTL(lim.maxTutar) + ') Aşıyor — Bankanın Onayına Bağlıdır.';
   } else {
